@@ -1,0 +1,41 @@
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy:latest
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /usr/share/nginx/html:/usr/share/nginx/html:rw
+      - /etc/nginx/certs:/etc/nginx/certs:rw
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    environment:
+      DEFAULT_HOST: itsfiveoclockhere.com
+
+  acme-companion:
+    image: nginxproxy/acme-companion:latest
+    container_name: acme-companion
+    depends_on:
+      - nginx-proxy
+    volumes:
+      - /etc/acme.sh:/etc/acme.sh
+      - /etc/nginx/certs:/etc/nginx/certs:rw
+      - /usr/share/nginx/html:/usr/share/nginx/html:rw
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      DEFAULT_EMAIL: feedback@iachieved.it
+      NGINX_PROXY_CONTAINER:  nginx-proxy
+
+  fiveoclock-app:
+    build:
+      context: ./app
+    container_name: fiveoclock-app
+    environment:
+      VIRTUAL_HOST: itsfiveoclockhere.com
+      LETSENCRYPT_HOST: itsfiveoclockhere.com
+      LETSENCRYPT_EMAIL: feedback@iachieved.it
+    expose:
+      - "3000"
+    depends_on:
+      - nginx-proxy
+      - acme-companion
